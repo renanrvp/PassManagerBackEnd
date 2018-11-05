@@ -8,6 +8,6 @@ app.use(bodyParser.json());
 app.use('/analytics/', routes.analytics);
 app.use('/servicerequest/', routes.servicerequest);
 
-http.createServer(app).listen(3000,function(){
+http.createServer(app).listen(3000, function () {
     console.log('Express listening on port 3000...');
 });
