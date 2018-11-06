@@ -1,28 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const MongoClient = require('mongodb').MongoClient;
-const Moment = require('moment-timezone');
-const ObjectId = require('mongodb').ObjectID;
-
-const url = 'mongodb://localhost:27017';
-
-const database = 'PassManager';
-
-const client = new MongoClient(url, {
-    useNewUrlParser: true
-});
-let db;
-let serviceRequestDB;
+const ServiceRequest = require('../service/servicerequest');
 
 router.use(function (req, res, next) {
     console.log('ServiceRequest');
 
-    client.connect(function (err) {
-        db = client.db(database);
-        serviceRequestDB = db.collection('ServiceRequest');
-
-        next();
-    });
+    ServiceRequest.start(next);
 });
 
 router
@@ -52,113 +35,58 @@ router
 
 router
     .post('/add/:companyCode', function (req, res) {
-        client.connect(function (err) {
-            let today = new Date(Moment.tz(new Date(), 'America/Sao_Paulo'));
-            today.setHours(0, 0, 0, 0);
+        ServiceRequest.create(req.companyCode)
+            .then(data => {
+                ServiceRequest.analytics(req.companyCode)
+                    .then(item => {
+                        const result = {
+                            ServiceRequest: data,
+                            Analytics: item
+                        };
 
-            serviceRequestDB.findOne({
-                    'companyCode': req.companyCode,
-                    'createDate': {
-                        '$gt': today.getTime()
-                    }
-                }, {
-                    'sort': {
-                        'createDate': -1
-                    }
-                })
-                .then((data) => {
-                    const code = (data != null ? data.code : 0) + 1;
-
-                    const sr = {
-                        'companyCode': req.companyCode,
-                        'createDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime(),
-                        'status': 0,
-                        'code': code
-                    };
-
-                    serviceRequestDB.insertOne(sr, (err, result) => {
-                        if (err == null) {
-                            res.send(sr);
-                        } else {
-                            console.log(err);
-                            res.sendStatus(500);
-                        }
-                    });
-                })
-                .catch((err) => {
-                    console.log(err);
-                    res.sendStatus(500);
-                });
-        });
+                        res.send(result);
+                    })
+                    .catch(err => {
+                        res.sendStatus(500);
+                    })
+            })
+            .catch(err => {
+                res.sendStatus(500);
+            });
     })
     .get('/:id', function (req, res) {
-        serviceRequestDB.findOne({
-                '_id': new ObjectId(req.params.id)
-            })
-            .then((data) => {
+        ServiceRequest.getOne(req.params.id)
+            .then(data => {
                 res.send(data);
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(err => {
                 res.sendStatus(500);
             });
     })
     .put('/startRequest/:id', function (req, res) {
-        serviceRequestDB.findOneAndUpdate({
-                '_id': new ObjectId(req.params.id)
-            }, {
-                $set: {
-                    'status': 1,
-                    'startDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
-                }
-            })
-            .then((data) => {
-                res.send(data.value);
-            })
-            .catch((err) => {
-                console.log(err);
-                res.sendStatus(500);
-            })
-
-    })
-    .put('/endRequest/:id', function (req, res) {
-        serviceRequestDB.findOneAndUpdate({
-                '_id': new ObjectId(req.params.id)
-            }, {
-                $set: {
-                    'status': 2,
-                    'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
-                }
-            })
-            .then((data) => {
-                res.send(data.value);
-            })
-            .catch((err) => {
-                console.log(err);
-                res.sendStatus(500);
-            })
-
-    })
-    .get('/next/:companyCode', function (req, res) {
-        let today = new Date(Moment.tz(new Date(), 'America/Sao_Paulo'));
-        today.setHours(0, 0, 0, 0);
-
-        serviceRequestDB.findOne({
-                'companyCode': req.companyCode,
-                'status': 0,
-                'createDate': {
-                    '$gt': today.getTime()
-                }
-            }, {
-                'sort': {
-                    'code': 1
-                }
-            })
-            .then((data) => {
+        ServiceRequest.startRequest(req.params.id)
+            .then(data => {
                 res.send(data);
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(err => {
+                res.sendStatus(500);
+            });
+    })
+    .put('/endRequest/:id', function (req, res) {
+        ServiceRequest.endRequest(req.params.id)
+            .then(data => {
+                res.send(data);
+            })
+            .catch(err => {
+                res.sendStatus(500);
+            });
+    })
+    .get('/next/:companyCode', function (req, res) {
+        ServiceRequest.next(req.companyCode)
+            .then(data => {
+                res.send(data);
+            })
+            .catch(err => {
                 res.sendStatus(500);
             });
     });
