@@ -115,6 +115,25 @@ const service = {
                 });
         });
     },
+    close: function(id) {
+        return new Promise((resolve, reject) => {
+            serviceRequestDB.findOneAndUpdate({
+                    '_id': new ObjectId(id)
+                }, {
+                    $set: {
+                        'status': 3,
+                        'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
+                    }
+                })
+                .then((data) => {
+                    resolve(data.value);
+                })
+                .catch((err) => {
+                    console.log(err);
+                    reject(err);
+                });
+        });
+    },
     next: function (companyCode) {
         return new Promise((resolve, reject) => {
             let today = new Date(Moment.tz(new Date(), 'America/Sao_Paulo'));

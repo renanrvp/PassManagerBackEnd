@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ServiceRequest = require('../service/servicerequest');
+const Moment = require('moment-timezone');
 
 router.use(function (req, res, next) {
     console.log('ServiceRequest');
@@ -57,9 +58,31 @@ router
     .get('/:id', function (req, res) {
         ServiceRequest.getOne(req.params.id)
             .then(data => {
-                res.send(data);
+                const today = new Date(Moment.tz(new Date(), 'America/Sao_Paulo'));
+                today.setHours(0, 0, 0, 0);
+
+                if (data.createDate < today.getTime()) {
+                    ServiceRequest.close(req.params.id)
+                    .then(item => {
+                        ServiceRequest.getOne(req.params.id)
+                            .then(item2 => {
+                                res.send(item2);
+                            })
+                            .catch(err => {
+                                console.log(err);
+                                res.sendStatus(500);
+                            });
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        res.sendStatus(500);
+                    });
+                } else {
+                    res.send(data);
+                }
             })
             .catch(err => {
+                console.log(err);
                 res.sendStatus(500);
             });
     })
