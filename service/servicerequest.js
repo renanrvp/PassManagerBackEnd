@@ -30,7 +30,7 @@ const service = {
                 serviceRequestDB.findOne({
                         'companyCode': companyCode,
                         'createDate': {
-                            '$gt': today.getTime()
+                            '$gt': today
                         }
                     }, {
                         'sort': {
@@ -42,7 +42,7 @@ const service = {
 
                         const sr = {
                             'companyCode': companyCode,
-                            'createDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime(),
+                            'createDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')),
                             'status': 0,
                             'code': code
                         };
@@ -84,7 +84,7 @@ const service = {
                 }, {
                     $set: {
                         'status': 1,
-                        'startDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
+                        'startDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo'))
                     }
                 })
                 .then((data) => {
@@ -103,7 +103,7 @@ const service = {
                 }, {
                     $set: {
                         'status': 2,
-                        'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
+                        'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo'))
                     }
                 })
                 .then((data) => {
@@ -122,7 +122,7 @@ const service = {
                 }, {
                     $set: {
                         'status': 3,
-                        'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo')).getTime()
+                        'endDate': new Date(Moment.tz(new Date(), 'America/Sao_Paulo'))
                     }
                 })
                 .then((data) => {
@@ -143,7 +143,7 @@ const service = {
                     'companyCode': companyCode,
                     'status': 0,
                     'createDate': {
-                        '$gt': today.getTime()
+                        '$gt': today
                     }
                 }, {
                     'sort': {
@@ -170,8 +170,8 @@ const service = {
             serviceRequestDB.findOne({
                     'companyCode': companyCode,
                     'createDate': {
-                        '$gt': startDate.getTime(),
-                        '$lt': endDate.getTime()
+                        '$gt': startDate,
+                        '$lt': endDate
                     },
                     'startDate': {
                         '$ne': null
@@ -196,8 +196,8 @@ const service = {
                     serviceRequestDB.find({
                             'companyCode': companyCode,
                             'createDate': {
-                                '$gt': startDate.getTime(),
-                                '$lt': endDate.getTime()
+                                '$gt': startDate,
+                                '$lt': endDate
                             },
                             'startDate': {
                                 '$ne': null
@@ -208,7 +208,7 @@ const service = {
                                 let queue = 0;
 
                                 data.forEach(item => {
-                                    queue += item.startDate - item.createDate;
+                                    queue += new Date(item.startDate) - new Date(item.createDate);
                                 });
 
                                 result.averageWaitTime = (queue / data.length);
