@@ -19,13 +19,55 @@ router
                 message: 'Company code must be a valid number.'
             });
         }
+    }).param('dayOfWeek', function (req, res, next) {
+        if (!isNaN(req.params.dayOfWeek) && Number.parseInt(req.params.dayOfWeek) > 0) {
+            req.dayOfWeek = Number.parseInt(req.params.dayOfWeek);
+            next();
+        } else {
+            res.send({
+                status: 400,
+                message: 'Day Of Week must be a valid number.'
+            });
+        }
     });
 
 router
-    .get('/current/:companyCode', function (req, res) {
-        ServiceRequest.analytics(req.companyCode)
+    .get('/:companyCode', function (req, res) {
+        ServiceRequest.getCurrentCode(req.companyCode)
             .then(data => {
-                res.send(data);
+                const result = {
+                    currentNumber: data
+                };
+                ServiceRequest.getAverageWaitTime(req.companyCode)
+                    .then(data2 => {
+                        result.averageWaitTime = data2;
+
+                        res.send(result);
+                    })
+                    .catch(err => {
+                        res.sendStatus(500);
+                    });
+            })
+            .catch(err => {
+                res.sendStatus(500);
+            });
+    })
+    .get('/day/:companyCode/:dayOfWeek', function (req, res) {
+        ServiceRequest.getAverageWaitTime(req.companyCode)
+            .then(data => {
+                const result = {
+                    averageWaitTime: data
+                };
+
+                ServiceRequest.getAvgRequestByHourByDay(req.companyCode, req.dayOfWeek)
+                    .then(data2 => {
+                        result.averageRequests = data2;
+
+                        res.send(result);
+                    })
+                    .catch(err => {
+                        res.sendStatus(500);
+                    });
             })
             .catch(err => {
                 res.sendStatus(500);

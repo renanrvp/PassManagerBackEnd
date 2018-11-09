@@ -12,6 +12,8 @@ const client = new MongoClient(url, {
 let db;
 let serviceRequestDB;
 
+const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+
 const service = {
     start: function (callback) {
         client.connect(function (err) {
@@ -115,7 +117,7 @@ const service = {
                 });
         });
     },
-    close: function(id) {
+    close: function (id) {
         return new Promise((resolve, reject) => {
             serviceRequestDB.findOneAndUpdate({
                     '_id': new ObjectId(id)
@@ -159,7 +161,7 @@ const service = {
                 });
         });
     },
-    analytics: function (companyCode) {
+    getCurrentCode: function (companyCode) {
         return new Promise((resolve, reject) => {
             const startDate = new Date();
             const endDate = new Date();
@@ -182,8 +184,6 @@ const service = {
                     }
                 })
                 .then((data) => {
-                    const result = {};
-
                     if (data == null) {
                         data = {
                             code: 0,
@@ -191,39 +191,103 @@ const service = {
                         };
                     }
 
-                    result.currentNumber = data.code;
-
-                    serviceRequestDB.find({
-                            'companyCode': companyCode,
-                            'createDate': {
-                                '$gt': startDate,
-                                '$lt': endDate
-                            },
-                            'startDate': {
-                                '$ne': null
-                            }
-                        })
-                        .toArray((err, data) => {
-                            if (err == null) {
-                                let queue = 0;
-
-                                data.forEach(item => {
-                                    queue += new Date(item.startDate) - new Date(item.createDate);
-                                });
-
-                                result.averageWaitTime = (queue / data.length);
-
-                                resolve(result);
-                            } else {
-                                console.log(err);
-                                reject(err);
-                            }
-                        });
-
+                    resolve(data.code);
                 })
                 .catch((err) => {
                     console.log(err);
                     reject(err);
+                });
+        });
+    },
+    getAverageWaitTime: function (companyCode) {
+        return new Promise((resolve, reject) => {
+            const startDate = new Date();
+            const endDate = new Date();
+
+            startDate.setHours(0, 0, 0, 0);
+            endDate.setHours(23, 59, 59, 999);
+
+            serviceRequestDB.find({
+                    'companyCode': companyCode,
+                    'createDate': {
+                        '$gt': startDate,
+                        '$lt': endDate
+                    },
+                    'startDate': {
+                        '$ne': null
+                    }
+                })
+                .toArray((err, data) => {
+                    if (err == null) {
+                        let queue = 0;
+
+                        data.forEach(item => {
+                            queue += new Date(item.startDate) - new Date(item.createDate);
+                        });
+
+                        resolve(queue / data.length);
+                    } else {
+                        console.log(err);
+                        reject(err);
+                    }
+                });
+        });
+    },
+    getAvgRequestByHourByDay: function (companyCode, dayOfWeek) {
+        return new Promise((resolve, reject) => {
+            serviceRequestDB.aggregate([{
+                        '$project': {
+                            'dayOfWeek': {
+                                '$dayOfWeek': '$createDate'
+                            },
+                            'hour': {
+                                '$hour': {
+                                    'date': '$createDate',
+                                    'timezone': 'America/Sao_Paulo'
+                                }
+                            },
+                            'companyCode': '$companyCode'
+                        }
+                    },
+                    {
+                        '$match': {
+                            'dayOfWeek': dayOfWeek,
+                            'companyCode': companyCode
+                        }
+                    },
+                    {
+                        '$group': {
+                            '_id': {
+                                'hour': '$hour'
+                            },
+                            'count': {
+                                '$sum': 1
+                            }
+                        }
+                    }
+                ])
+                .toArray((err, data) => {
+                    if (err == null) {
+                        let result = [];
+                        let total = data.reduce((cnt, item) => {
+                            return cnt + item.count;
+                        }, 0);
+
+                        hours.forEach((hour) => {
+                            const item = data.find((val) => {
+                                return val._id.hour === hour
+                            });
+                            result.push({
+                                'hour': hour,
+                                'porcentage': item != undefined ? (item.count / total) : 0
+                            });
+                        });
+
+                        resolve(result);
+                    } else {
+                        console.log(err);
+                        reject(err);
+                    }
                 });
         });
     }

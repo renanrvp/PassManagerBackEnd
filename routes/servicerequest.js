@@ -38,7 +38,7 @@ router
     .post('/add/:companyCode', function (req, res) {
         ServiceRequest.create(req.companyCode)
             .then(data => {
-                ServiceRequest.analytics(req.companyCode)
+                ServiceRequest.getCurrentCode(req.companyCode)
                     .then(item => {
                         const result = {
                             ServiceRequest: data,
@@ -61,7 +61,7 @@ router
                 const today = new Date(Moment.tz(new Date(), 'America/Sao_Paulo'));
                 today.setHours(0, 0, 0, 0);
 
-                if (data.createDate < today.getTime()) {
+                if (new Date(data.createDate) < today) {
                     ServiceRequest.close(req.params.id)
                     .then(item => {
                         ServiceRequest.getOne(req.params.id)
